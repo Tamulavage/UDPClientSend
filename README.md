@@ -1,2 +1,2 @@
 # UDPClientSend
-Designed, buil, testedt for Arduino Nano Connect 
+Designed, buil, tested on Arduino Nano Connect 

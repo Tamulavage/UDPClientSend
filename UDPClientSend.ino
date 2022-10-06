@@ -26,6 +26,7 @@ int lastB_ButtonState = 0 ;
 int B_BUTTONstate = 0;
 int potValue = 0;
 int lastPotValue = 0;
+int sensitivityPOT = 15;
 
 int convertRoll, convertPitch;
 float lastAx = 0;
@@ -33,7 +34,6 @@ float lastAy = 0;
 float lastAz = 0;
 float sensitivityAcc = .06;
   
-// Accelerator
 float Ax, Ay, Az;
 boolean angleChanged = false;
 float roll, pitch;
@@ -72,7 +72,7 @@ void loop() {
   B_BUTTONstate = digitalRead(B_BUTTON);
   potValue = analogRead(POT_PIN);
 
-  if (potValue > (lastPotValue + 15) || potValue <  (lastPotValue - 15)) {
+  if (potValue > (lastPotValue + sensitivityPOT) || potValue <  (lastPotValue - sensitivityPOT)) {
     sprintf(clientMsg, "--POT%d", potValue);
     sendMsg(clientMsg) ;
     lastPotValue = potValue;
@@ -170,7 +170,6 @@ void wifiConnect() {
   while (status != WL_CONNECTED) {
     Serial.print("Attempting to connect to SSID: ");
     Serial.println(ssid);
-    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
     status = WiFi.begin(ssid, pass);
 
     // wait 2 seconds for connection:

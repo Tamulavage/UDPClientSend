@@ -9,15 +9,18 @@
 #define B_BUTTON 3
 #define POT_PIN A1
 
+#define pot_enabled true
+#define button_enabled true
+#define wifi_enabled true
+
 int status = WL_IDLE_STATUS;
 char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
-IPAddress serverAddress(192, 168, 1, 223);
+IPAddress serverAddress(192, 168, 1, 200);
 
 unsigned int localPort = 2390;
 char packetBuffer[256];
 char  clientMsg[25] = "";
-
 WiFiUDP Udp;
 
 int lastA_ButtonState = 0 ;
@@ -26,14 +29,14 @@ int lastB_ButtonState = 0 ;
 int B_BUTTONstate = 0;
 int potValue = 0;
 int lastPotValue = 0;
-int sensitivityPOT = 15;
+int sensitivityPOT = 35;
 
 int convertRoll, convertPitch;
 float lastAx = 0;
 float lastAy = 0;
 float lastAz = 0;
-float sensitivityAcc = .06;
-  
+float sensitivityAcc = .05;
+
 float Ax, Ay, Az;
 boolean angleChanged = false;
 float roll, pitch;
@@ -51,10 +54,12 @@ void setup() {
   }
   Serial.println("\IMU Chip setup completed...");
 
-  wifiSetUp();
-  printBlue();
+  if(wifi_enabled) {
+    wifiSetUp();
+    printBlue();
+    wifiConnect();
+  }
 
-  wifiConnect();
 
   Udp.begin( localPort);
   Serial.println("\nConnection completed...");
@@ -72,47 +77,43 @@ void loop() {
   B_BUTTONstate = digitalRead(B_BUTTON);
   potValue = analogRead(POT_PIN);
 
-  if (potValue > (lastPotValue + sensitivityPOT) || potValue <  (lastPotValue - sensitivityPOT)) {
+  if (pot_enabled && (potValue > (lastPotValue + sensitivityPOT) || potValue <  (lastPotValue - sensitivityPOT))) {
     sprintf(clientMsg, "--POT%d", potValue);
     sendMsg(clientMsg) ;
     lastPotValue = potValue;
   }
 
-  if (A_BUTTONstate == HIGH && A_BUTTONstate != lastA_ButtonState)
-  {
-    Serial.println("A PRESSED");
-    strcpy(clientMsg, "--BUTTONA_ON");
-    sendMsg(clientMsg) ;
+  if (button_enabled) {
+    if (A_BUTTONstate == HIGH && A_BUTTONstate != lastA_ButtonState)
+    {
+      strcpy(clientMsg, "--BUTTONA_ON");
+      sendMsg(clientMsg) ;
+    }
+
+    if (A_BUTTONstate == LOW && A_BUTTONstate != lastA_ButtonState)
+    {
+      strcpy(clientMsg, "--BUTTONA_OFF");
+      sendMsg(clientMsg) ;
+    }
+
+    if (B_BUTTONstate == HIGH && B_BUTTONstate != lastB_ButtonState)
+    {
+      strcpy(clientMsg, "--BUTTONB_ON");
+      sendMsg(clientMsg) ;
+    }
+
+    if (B_BUTTONstate == LOW && B_BUTTONstate != lastB_ButtonState)
+    {
+      strcpy(clientMsg, "--BUTTONB_OFF");
+      sendMsg(clientMsg) ;
+    }
   }
 
-  if (A_BUTTONstate == LOW && A_BUTTONstate != lastA_ButtonState)
-  {
-    Serial.println(A_BUTTONstate);
-    strcpy(clientMsg, "--BUTTONA_OFF");
-    sendMsg(clientMsg) ;
-  }
-
-  if (B_BUTTONstate == HIGH && B_BUTTONstate != lastB_ButtonState)
-  {
-    Serial.println(A_BUTTONstate);
-    strcpy(clientMsg, "--BUTTONB_ON");
-    sendMsg(clientMsg) ;
-  }
-
-  if (B_BUTTONstate == LOW && B_BUTTONstate != lastB_ButtonState)
-  {
-    strcpy(clientMsg, "--BUTTONB_OFF");
-    sendMsg(clientMsg) ;
-  }
-  
 
   if (IMU.accelerationAvailable()) {
     IMU.readAcceleration(Ax, Ay, Az);
     angleChanged = false;
-    if (Ax > (lastAx + sensitivityAcc) || Ax < (lastAx - sensitivityAcc)) {
-      angleChanged = true;
-    }
-    else if (Ay > (lastAy + sensitivityAcc) || Ay < (lastAy - sensitivityAcc)) {
+    if (Ay > (lastAy + sensitivityAcc) || Ay < (lastAy - sensitivityAcc)) {
       angleChanged = true;
     }
     else if (Az > (lastAz + sensitivityAcc) || Az < (lastAz - sensitivityAcc)) {
@@ -120,17 +121,13 @@ void loop() {
     }
 
     if (angleChanged) {
-      lastAx = Ax;
+      //lastAx = Ax;
       lastAy = Ay;
       lastAz = Az;
-//      roll = atan2(Ay, Az) * 180 / PI;
-//      pitch = atan2(-Ax, sqrt(Ay * Ay + Az * Az)) * 180 / PI;
-//      convertRoll = roll * 10;
-//      convertPitch = pitch * 10;
 
       convertRoll = calculateRoll(Ay, Az);
-      sprintf(clientMsg, "--ANGLE-ROLL%d", convertRoll ); 
-      sendMsg(clientMsg) ; 
+      sprintf(clientMsg, "--ANGLE-ROLL%d", convertRoll );
+      sendMsg(clientMsg) ;
 
       convertPitch = calculatePitch(Ax, Ay, Az);
       sprintf(clientMsg, "--ANGLE-PITCH%d", convertPitch );
@@ -139,14 +136,14 @@ void loop() {
   }
 }
 
-int calculateRoll(float y, float z){
-      roll = atan2(y, z) * 180 / PI;
-      return roll * 10;
+int calculateRoll(float y, float z) {
+  roll = atan2(y, z) * 180 / PI;
+  return roll * 10;
 }
 
-int calculatePitch(float x, float y, float z){
-      pitch = atan2(-x, sqrt(y * y + z * z)) * 180 / PI;
-      return pitch * 10;
+int calculatePitch(float x, float y, float z) {
+  pitch = atan2(-x, sqrt(y * y + z * z)) * 180 / PI;
+  return pitch * 10;
 }
 
 void printWifiStatus() {

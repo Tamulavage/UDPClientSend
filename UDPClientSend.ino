@@ -1,4 +1,3 @@
-
 #include <SPI.h>
 #include <WiFiNINA.h>
 #include <WiFiUdp.h>
@@ -32,7 +31,6 @@ int lastPotValue = 0;
 int sensitivityPOT = 35;
 
 int convertRoll, convertPitch;
-float lastAx = 0;
 float lastAy = 0;
 float lastAz = 0;
 float sensitivityAcc = .05;
@@ -109,7 +107,6 @@ void loop() {
     }
   }
 
-
   if (IMU.accelerationAvailable()) {
     IMU.readAcceleration(Ax, Ay, Az);
     angleChanged = false;
@@ -121,7 +118,6 @@ void loop() {
     }
 
     if (angleChanged) {
-      //lastAx = Ax;
       lastAy = Ay;
       lastAz = Az;
 

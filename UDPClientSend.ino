@@ -7,37 +7,42 @@
 #define A_BUTTON 4
 #define B_BUTTON 3
 #define POT_PIN A1
+#define heart_beat_pin   LED_BUILTIN
 
 #define pot_enabled true
 #define button_enabled true
 #define wifi_enabled true
 
+const long unsigned heart_beat_freq = 1000; // time(milliseconds) of heart beat frequency
+long countOfRunTime = 0;
+long unsigned heart_beat_on_off_time; // the time the LED is on and off - 1/2 frequency
+long unsigned last_heart_beat_time;   // time in milliseconds of last heart beat status change
+bool heart_beat_status = HIGH;        // current status of heart beat, start high
+
+
 int status = WL_IDLE_STATUS;
-char ssid[] = SECRET_SSID;
-char pass[] = SECRET_PASS;
-IPAddress serverAddress(192, 168, 1, 200);
+const char ssid[] = SECRET_SSID;
+const char pass[] = SECRET_PASS;
+const IPAddress serverAddress(192, 168, 1, 200);
 
 unsigned int localPort = 2390;
-char packetBuffer[256];
+//char packetBuffer[256];
 char  clientMsg[25] = "";
 WiFiUDP Udp;
 
-int lastA_ButtonState = 0 ;
 int A_BUTTONstate = 0;
-int lastB_ButtonState = 0 ;
 int B_BUTTONstate = 0;
 int potValue = 0;
 int lastPotValue = 0;
-int sensitivityPOT = 35;
+const int sensitivityPOT = 35;
 
 int convertRoll, convertPitch;
 float lastAy = 0;
 float lastAz = 0;
-float sensitivityAcc = .05;
+const float sensitivityAcc = .05;
 
 float Ax, Ay, Az;
 boolean angleChanged = false;
-float roll, pitch;
 
 void setup() {
 
@@ -62,14 +67,19 @@ void setup() {
   Udp.begin( localPort);
   Serial.println("\nConnection completed...");
 
+  pinMode(heart_beat_pin, OUTPUT);
+  heart_beat_on_off_time = heart_beat_freq / 2; // LED is on and off at 1/2 frequency time
+
+
   printGreen();
   Serial.println("\Set up completed...");
 }
 
-void loop() {
-
-  lastA_ButtonState = A_BUTTONstate;
-  lastB_ButtonState = B_BUTTONstate;
+void loop () {
+  
+  heart_beat();
+  int lastA_ButtonState = A_BUTTONstate;
+  int lastB_ButtonState = B_BUTTONstate;
 
   A_BUTTONstate = digitalRead(A_BUTTON);
   B_BUTTONstate = digitalRead(B_BUTTON);
@@ -133,27 +143,26 @@ void loop() {
 }
 
 int calculateRoll(float y, float z) {
-  roll = atan2(y, z) * 180 / PI;
-  return roll * 10;
+//  roll = atan2(y, z) * 180 / PI;
+  return (atan2(y, z) * 180 / PI) * 10;
 }
 
 int calculatePitch(float x, float y, float z) {
-  pitch = atan2(-x, sqrt(y * y + z * z)) * 180 / PI;
-  return pitch * 10;
+//  pitch = atan2(-x, sqrt(y * y + z * z)) * 180 / PI;
+  return (atan2(-x, sqrt(y * y + z * z)) * 180 / PI) * 10;
 }
 
 void printWifiStatus() {
   Serial.print("SSID: ");
   Serial.println(WiFi.SSID());
 
-  IPAddress ip = WiFi.localIP();
+//  IPAddress ip = WiFi.localIP();
   Serial.print("IP Address: ");
-  Serial.println(ip);
+  Serial.println( WiFi.localIP());
 
   // print the received signal strength:
-  long rssi = WiFi.RSSI();
   Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
+  Serial.print(WiFi.RSSI());
   Serial.println(" dBm");
 }
 
@@ -181,7 +190,6 @@ void GPIOSetUp() {
 }
 
 void wifiSetUp() {
-
   // check for the WiFi module:
   if (WiFi.status() == WL_NO_MODULE) {
     Serial.println("Communication with WiFi module failed!");
@@ -200,6 +208,9 @@ void sendMsg(char clientMsg[]) {
   Udp.beginPacket(serverAddress, localPort);
   Udp.write(clientMsg);
   Udp.endPacket();
+  Udp.flush();
+  //delay(100);
+  countOfRunTime=0;
 }
 
 void printGreen() {
@@ -218,4 +229,17 @@ void printRed() {
   digitalWrite(LEDG, LOW);
   digitalWrite(LEDB, LOW);
   digitalWrite(LEDR, HIGH);
+}
+
+void heart_beat() {
+  if (millis() - last_heart_beat_time >= heart_beat_on_off_time) {
+    // time to swap status of the heart beat LED and update it
+    last_heart_beat_time = millis();
+    heart_beat_status = !heart_beat_status;           // invert current heart beat status value
+    digitalWrite(heart_beat_pin, heart_beat_status);  // update LED with new status
+    if(heart_beat_status){
+      countOfRunTime++;
+      Serial.println(countOfRunTime);
+    }
+  }
 }

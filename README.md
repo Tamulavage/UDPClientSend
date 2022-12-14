@@ -10,4 +10,4 @@ Connections:
 
  Change local IP address to the IP address that will recieve the UDP. Add your wifi infomration in a file called secrets.h
  
- This was tested out sending to a pythonapplication on a RPI
+ This was tested out sending to a python application on a RPI
